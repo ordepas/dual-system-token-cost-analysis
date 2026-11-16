@@ -1,0 +1,10 @@
+# Estado local y datos de ejecución
+__pycache__/
+*.pyc
+.jev_off
+.jev_audit.jsonl
+.jev_costos.jsonl
+
+# Configuración de la máquina y artefactos generados
+.claude/
+.archify/
