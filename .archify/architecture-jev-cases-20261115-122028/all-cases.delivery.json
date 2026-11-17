@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "e9f8595e-19d0-4b36-898e-035d57159e40",
+  "status": "failed",
+  "command": "deliver",
+  "stage": "check",
+  "input": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\all-cases.json",
+  "output": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\all-cases.html",
+  "artifact": {
+    "sha256": "c31d5c99b7ebee2a6934f0af852b4ee9e832bea52aa8c8c73e0e140741a26843",
+    "bytes": 876139
+  },
+  "error": "Final artifact check failed; the previous artifact was preserved."
+}

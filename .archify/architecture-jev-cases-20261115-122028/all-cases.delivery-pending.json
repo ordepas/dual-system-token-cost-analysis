@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "e9f8595e-19d0-4b36-898e-035d57159e40",
+  "input": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\all-cases.json",
+  "output": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\all-cases.html"
+}

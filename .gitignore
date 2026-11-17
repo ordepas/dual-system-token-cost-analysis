@@ -5,9 +5,15 @@ __pycache__/
 .jev_audit.jsonl
 .jev_costos.jsonl
 
-# Configuración de la máquina y artefactos generados
+# Configuración de la máquina
 .claude/
-.archify/
+
+# Archify: se versionan solo las páginas y sus fuentes, no capturas ni recibos
+.archify/*
+!.archify/architecture-jev-cases-20261115-122028/
+.archify/architecture-jev-cases-20261115-122028/*
+!.archify/architecture-jev-cases-20261115-122028/*.html
+!.archify/architecture-jev-cases-20261115-122028/*.json
 
 # Capturas de verificación
 .capturas/

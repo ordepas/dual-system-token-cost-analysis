@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "1e18cff1-04fa-457d-8c34-23ebbf076980",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\graph-clis.json",
+  "output": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\graph-clis.html",
+  "specification": {
+    "sha256": "c3761e05d745f1770e63636fd4b66790e226505582ae24b04cf22b9909f66a41",
+    "bytes": 4469
+  },
+  "artifact": {
+    "sha256": "e6abe45e8eeb983a55ded739d57db6bf2ab846320caab366c2ea3deac5e339f4",
+    "bytes": 843315
+  }
+}

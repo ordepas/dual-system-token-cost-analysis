@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Caso 7 · Gate de escritura",
+    "subtitle": "Decide antes del disco; por defecto solo archivos .py",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-jev-cases-20261115-122028/case-7.html"
+  },
+  "components": [
+    {
+      "id": "src",
+      "type": "database",
+      "label": "Escritura propuesta",
+      "sublabel": "contenido o archivo resultante",
+      "pos": [
+        40,
+        170
+      ],
+      "size": [
+        230,
+        84
+      ]
+    },
+    {
+      "id": "tool",
+      "type": "backend",
+      "label": "spec_gate.py",
+      "sublabel": "bloquea antes del disco",
+      "pos": [
+        350,
+        170
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "jevpy",
+      "type": "backend",
+      "label": "jev.py",
+      "sublabel": "único cliente API",
+      "pos": [
+        680,
+        170
+      ],
+      "size": [
+        210,
+        84
+      ]
+    },
+    {
+      "id": "api",
+      "type": "external",
+      "label": "Jev (System One)",
+      "sublabel": "el modelo",
+      "pos": [
+        970,
+        165
+      ],
+      "size": [
+        190,
+        84
+      ]
+    },
+    {
+      "id": "out",
+      "type": "database",
+      "label": "Archivo en disco",
+      "sublabel": "si el permiso se concede",
+      "pos": [
+        350,
+        330
+      ],
+      "size": [
+        250,
+        76
+      ]
+    },
+    {
+      "id": "humano",
+      "type": "external",
+      "label": "Humano",
+      "sublabel": "escribe el prompt",
+      "pos": [
+        40,
+        20
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "harness",
+      "type": "backend",
+      "label": "Harness",
+      "sublabel": "ejecuta y lanza",
+      "pos": [
+        280,
+        20
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "flag",
+      "type": "database",
+      "label": ".jev_off",
+      "sublabel": "401/402/403 o apagado",
+      "pos": [
+        680,
+        330
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "specs",
+      "type": "database",
+      "label": "specs.md",
+      "sublabel": "las reglas",
+      "pos": [
+        40,
+        330
+      ],
+      "size": [
+        150,
+        50
+      ]
+    },
+    {
+      "id": "audit",
+      "type": "database",
+      "label": ".jev_audit.jsonl",
+      "sublabel": "cada decisión",
+      "pos": [
+        900,
+        330
+      ],
+      "size": [
+        170,
+        48
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "read",
+      "from": "src",
+      "to": "tool",
+      "label": "estado",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ask",
+      "from": "tool",
+      "to": "jevpy",
+      "label": "preguntas"
+    },
+    {
+      "id": "call",
+      "from": "jevpy",
+      "to": "api",
+      "label": "1 POST"
+    },
+    {
+      "id": "result",
+      "from": "harness",
+      "to": "out",
+      "label": "resultado"
+    },
+    {
+      "id": "prompt",
+      "from": "humano",
+      "to": "harness",
+      "label": "prompt",
+      "variant": "emphasis"
+    },
+    {
+      "id": "lanza",
+      "from": "harness",
+      "to": "tool",
+      "label": "PreToolUse"
+    },
+    {
+      "id": "respuestas",
+      "from": "jevpy",
+      "to": "tool",
+      "label": "respuestas",
+      "variant": "dashed"
+    },
+    {
+      "id": "vuelta",
+      "from": "tool",
+      "to": "harness",
+      "label": "decisión"
+    },
+    {
+      "id": "resp",
+      "from": "api",
+      "to": "jevpy",
+      "label": "respuesta"
+    },
+    {
+      "id": "switch",
+      "from": "jevpy",
+      "to": "flag",
+      "label": "escribe"
+    },
+    {
+      "id": "leeflag",
+      "from": "flag",
+      "to": "jevpy",
+      "label": "se lee siempre"
+    },
+    {
+      "id": "rules",
+      "from": "specs",
+      "to": "tool",
+      "label": "reglas"
+    },
+    {
+      "id": "log",
+      "from": "tool",
+      "to": "audit",
+      "label": "registra"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Qué hace",
+      "items": [
+        "Hook PreToolUse: corre después de que el modelo propone y antes de ejecutar",
+        "Gobierno primero (specs.md y settings.json), luego credenciales, luego una noul por regla; 0.8 bloquea, 0.5 pregunta, el resto calla",
+        "Registra cada decisión; la versión del modelo solo cuando salió de Jev"
+      ]
+    }
+  ]
+}

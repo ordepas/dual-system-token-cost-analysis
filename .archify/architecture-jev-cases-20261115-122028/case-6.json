@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Caso 6 · Navegación de interfaz",
+    "subtitle": "Un clic por paso hasta el objetivo",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-jev-cases-20261115-122028/case-6.html",
+    "legend": {
+      "entries": {
+        "database": {
+          "label": "Archivo o salida"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "src",
+      "type": "database",
+      "label": "Página web",
+      "sublabel": "elementos visibles",
+      "pos": [
+        40,
+        170
+      ],
+      "size": [
+        230,
+        84
+      ]
+    },
+    {
+      "id": "tool",
+      "type": "backend",
+      "label": "browse.py",
+      "sublabel": "noul y choice por paso",
+      "pos": [
+        350,
+        170
+      ],
+      "size": [
+        250,
+        84
+      ]
+    },
+    {
+      "id": "jevpy",
+      "type": "backend",
+      "label": "jev.py",
+      "sublabel": "único cliente API",
+      "pos": [
+        680,
+        170
+      ],
+      "size": [
+        210,
+        84
+      ]
+    },
+    {
+      "id": "api",
+      "type": "external",
+      "label": "Jev (System One)",
+      "sublabel": "el modelo",
+      "pos": [
+        970,
+        165
+      ],
+      "size": [
+        190,
+        84
+      ]
+    },
+    {
+      "id": "out",
+      "type": "database",
+      "label": "Clic",
+      "sublabel": "repite hasta 8 veces",
+      "pos": [
+        350,
+        330
+      ],
+      "size": [
+        250,
+        76
+      ]
+    },
+    {
+      "id": "humano",
+      "type": "external",
+      "label": "Humano",
+      "sublabel": "escribe el prompt",
+      "pos": [
+        40,
+        20
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "harness",
+      "type": "backend",
+      "label": "Harness",
+      "sublabel": "ejecuta y lanza",
+      "pos": [
+        280,
+        20
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "flag",
+      "type": "database",
+      "label": ".jev_off",
+      "sublabel": "401/402/403 o apagado",
+      "pos": [
+        680,
+        330
+      ],
+      "size": [
+        170,
+        56
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "read",
+      "from": "src",
+      "to": "tool",
+      "label": "estado",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ask",
+      "from": "tool",
+      "to": "jevpy",
+      "label": "preguntas"
+    },
+    {
+      "id": "call",
+      "from": "jevpy",
+      "to": "api",
+      "label": "1 POST por paso (≤8)"
+    },
+    {
+      "id": "result",
+      "from": "tool",
+      "to": "out",
+      "label": "resultado",
+      "variant": "dashed"
+    },
+    {
+      "id": "prompt",
+      "from": "humano",
+      "to": "harness",
+      "label": "prompt",
+      "variant": "emphasis"
+    },
+    {
+      "id": "lanza",
+      "from": "harness",
+      "to": "tool",
+      "label": "Bash"
+    },
+    {
+      "id": "amano",
+      "from": "humano",
+      "to": "tool",
+      "label": "a mano",
+      "variant": "dashed"
+    },
+    {
+      "id": "respuestas",
+      "from": "jevpy",
+      "to": "tool",
+      "label": "respuestas",
+      "variant": "dashed"
+    },
+    {
+      "id": "vuelta",
+      "from": "tool",
+      "to": "harness",
+      "label": "salida"
+    },
+    {
+      "id": "resp",
+      "from": "api",
+      "to": "jevpy",
+      "label": "respuesta"
+    },
+    {
+      "id": "switch",
+      "from": "jevpy",
+      "to": "flag",
+      "label": "escribe"
+    },
+    {
+      "id": "leeflag",
+      "from": "flag",
+      "to": "jevpy",
+      "label": "se lee siempre"
+    },
+    {
+      "id": "loop",
+      "from": "out",
+      "to": "src",
+      "label": "vuelve a mirar"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Qué hace",
+      "items": [
+        "Playwright sobre el Edge instalado",
+        "Un noul de objetivo cumplido y un choice del elemento a accionar",
+        "El código hace el clic; se detiene si no hay elemento útil o si el objetivo ya se cumple (0.6)"
+      ]
+    }
+  ]
+}

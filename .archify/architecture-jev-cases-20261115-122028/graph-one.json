@@ -1,0 +1,709 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Los siete casos en un solo grafo",
+    "subtitle": "Escritura, compactación y las cinco CLIs por igual",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-jev-cases-20261115-122028/graph-one.html"
+  },
+  "components": [
+    {
+      "id": "humano",
+      "type": "external",
+      "label": "Humano",
+      "sublabel": "escribe el prompt",
+      "pos": [
+        40,
+        110
+      ],
+      "size": [
+        130,
+        46
+      ]
+    },
+    {
+      "id": "modelo",
+      "type": "external",
+      "label": "Modelo",
+      "sublabel": "propone y lee",
+      "pos": [
+        230,
+        110
+      ],
+      "size": [
+        130,
+        46
+      ]
+    },
+    {
+      "id": "harness",
+      "type": "backend",
+      "label": "Harness",
+      "sublabel": "ejecuta y lanza hooks",
+      "pos": [
+        420,
+        110
+      ],
+      "size": [
+        150,
+        70
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "security",
+      "label": "spec_gate.py",
+      "sublabel": "decide antes del disco",
+      "pos": [
+        660,
+        110
+      ],
+      "size": [
+        150,
+        70
+      ]
+    },
+    {
+      "id": "archivo",
+      "type": "database",
+      "label": "Archivo en disco",
+      "sublabel": "lo escribe el harness",
+      "pos": [
+        660,
+        20
+      ],
+      "size": [
+        140,
+        46
+      ]
+    },
+    {
+      "id": "digest",
+      "type": "backend",
+      "label": "compact_digest.py",
+      "sublabel": "elige qué sobrevive",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        160,
+        50
+      ]
+    },
+    {
+      "id": "summary",
+      "type": "backend",
+      "label": "Resumen",
+      "sublabel": "lo escribe el harness",
+      "pos": [
+        40,
+        370
+      ],
+      "size": [
+        150,
+        50
+      ]
+    },
+    {
+      "id": "flag",
+      "type": "database",
+      "label": ".jev_off",
+      "sublabel": "sin saldo o apagado",
+      "pos": [
+        980,
+        330
+      ],
+      "size": [
+        140,
+        46
+      ]
+    },
+    {
+      "id": "jevpy",
+      "type": "backend",
+      "label": "jev.py",
+      "sublabel": "único cliente de la API",
+      "pos": [
+        770,
+        220
+      ],
+      "size": [
+        150,
+        70
+      ]
+    },
+    {
+      "id": "api",
+      "type": "external",
+      "label": "Jev (System One)",
+      "sublabel": "el modelo",
+      "pos": [
+        1050,
+        230
+      ],
+      "size": [
+        140,
+        50
+      ]
+    },
+    {
+      "id": "c0",
+      "type": "backend",
+      "label": "skill_pick.py",
+      "sublabel": "una skill o ninguna",
+      "pos": [
+        348,
+        420
+      ],
+      "size": [
+        150,
+        44
+      ]
+    },
+    {
+      "id": "c1",
+      "type": "backend",
+      "label": "file_rank.py",
+      "sublabel": "ordena candidatos",
+      "pos": [
+        518,
+        420
+      ],
+      "size": [
+        150,
+        44
+      ]
+    },
+    {
+      "id": "c2",
+      "type": "backend",
+      "label": "review_gate.py",
+      "sublabel": "juzga un diff",
+      "pos": [
+        688,
+        420
+      ],
+      "size": [
+        150,
+        44
+      ]
+    },
+    {
+      "id": "c3",
+      "type": "backend",
+      "label": "browse.py",
+      "sublabel": "clics al objetivo",
+      "pos": [
+        858,
+        420
+      ],
+      "size": [
+        150,
+        44
+      ]
+    },
+    {
+      "id": "c4",
+      "type": "backend",
+      "label": "rule_coverage.py",
+      "sublabel": "reglas contra tests",
+      "pos": [
+        1028,
+        420
+      ],
+      "size": [
+        150,
+        44
+      ]
+    },
+    {
+      "id": "jevpy2",
+      "type": "backend",
+      "label": "jev.py",
+      "sublabel": "cliente de las CLIs",
+      "pos": [
+        380,
+        530
+      ],
+      "size": [
+        850,
+        50
+      ]
+    },
+    {
+      "id": "specs",
+      "type": "database",
+      "label": "specs.md",
+      "sublabel": "las reglas (JEV_SPECS)",
+      "pos": [
+        520,
+        200
+      ],
+      "size": [
+        140,
+        44
+      ]
+    },
+    {
+      "id": "audit",
+      "type": "database",
+      "label": ".jev_audit.jsonl",
+      "sublabel": "las que deciden",
+      "pos": [
+        820,
+        20
+      ],
+      "size": [
+        150,
+        44
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "prompt",
+      "from": "humano",
+      "to": "modelo",
+      "label": "prompt",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "call",
+      "from": "modelo",
+      "to": "harness",
+      "label": "propone",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "fire",
+      "from": "harness",
+      "to": "gate",
+      "label": "PreToolUse",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "decision",
+      "from": "gate",
+      "to": "harness",
+      "label": "decisión",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "exec",
+      "from": "harness",
+      "to": "archivo",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "via": [
+        [
+          495,
+          95
+        ],
+        [
+          730,
+          95
+        ]
+      ]
+    },
+    {
+      "id": "nohook",
+      "from": "harness",
+      "to": "archivo",
+      "label": "sin hook",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          495,
+          75
+        ],
+        [
+          640,
+          75
+        ],
+        [
+          640,
+          43
+        ]
+      ]
+    },
+    {
+      "id": "precompact",
+      "from": "harness",
+      "to": "digest",
+      "label": "PreCompact",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          495,
+          215
+        ],
+        [
+          120,
+          215
+        ]
+      ]
+    },
+    {
+      "id": "nouls",
+      "from": "digest",
+      "to": "jevpy",
+      "label": "nouls",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "post",
+      "from": "jevpy",
+      "to": "api",
+      "label": "1 POST ⇄ respuesta",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "noul",
+      "from": "gate",
+      "to": "jevpy",
+      "label": "una por regla",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "answers",
+      "from": "jevpy",
+      "to": "gate",
+      "label": "respuestas",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          950,
+          255
+        ],
+        [
+          950,
+          145
+        ]
+      ]
+    },
+    {
+      "id": "switch",
+      "from": "jevpy",
+      "to": "flag",
+      "label": "escribe · se lee siempre",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          845,
+          310
+        ],
+        [
+          1050,
+          310
+        ]
+      ]
+    },
+    {
+      "id": "call2",
+      "from": "jevpy2",
+      "to": "api",
+      "label": "1 POST por consulta",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "via": [
+        [
+          1230,
+          555
+        ],
+        [
+          1290,
+          555
+        ],
+        [
+          1290,
+          290
+        ],
+        [
+          1120,
+          290
+        ]
+      ]
+    },
+    {
+      "id": "q0",
+      "from": "c0",
+      "to": "jevpy2",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "r0",
+      "from": "jevpy2",
+      "to": "c0",
+      "label": "propuesta",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "q1",
+      "from": "c1",
+      "to": "jevpy2",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "r1",
+      "from": "jevpy2",
+      "to": "c1",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "q2",
+      "from": "c2",
+      "to": "jevpy2",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "r2",
+      "from": "jevpy2",
+      "to": "c2",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "q3",
+      "from": "c3",
+      "to": "jevpy2",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "r3",
+      "from": "jevpy2",
+      "to": "c3",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "q4",
+      "from": "c4",
+      "to": "jevpy2",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "r4",
+      "from": "jevpy2",
+      "to": "c4",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "genera",
+      "from": "harness",
+      "to": "summary",
+      "label": "genera el resumen",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          495,
+          190
+        ],
+        [
+          20,
+          190
+        ],
+        [
+          20,
+          395
+        ]
+      ]
+    },
+    {
+      "id": "resultado",
+      "from": "harness",
+      "to": "modelo",
+      "label": "resultado",
+      "fromSide": "left",
+      "toSide": "bottom",
+      "via": [
+        [
+          380,
+          145
+        ],
+        [
+          380,
+          180
+        ],
+        [
+          295,
+          180
+        ]
+      ]
+    },
+    {
+      "id": "responde",
+      "from": "modelo",
+      "to": "humano",
+      "label": "responde",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          295,
+          90
+        ],
+        [
+          105,
+          90
+        ]
+      ]
+    },
+    {
+      "id": "respdig",
+      "from": "jevpy",
+      "to": "digest",
+      "label": "respuestas",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "bottom",
+      "via": [
+        [
+          740,
+          255
+        ],
+        [
+          740,
+          360
+        ],
+        [
+          120,
+          360
+        ]
+      ]
+    },
+    {
+      "id": "instr",
+      "from": "digest",
+      "to": "harness",
+      "label": "instrucciones",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "via": [
+        [
+          120,
+          230
+        ],
+        [
+          495,
+          230
+        ]
+      ]
+    },
+    {
+      "id": "lib2",
+      "from": "c2",
+      "to": "c4",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          763,
+          410
+        ],
+        [
+          1015,
+          410
+        ],
+        [
+          1015,
+          442
+        ]
+      ],
+      "label": "importa rules"
+    },
+    {
+      "id": "rules",
+      "from": "specs",
+      "to": "gate",
+      "label": "reglas",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          590,
+          145
+        ]
+      ]
+    },
+    {
+      "id": "log",
+      "from": "gate",
+      "to": "audit",
+      "label": "registra",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "via": [
+        [
+          895,
+          145
+        ],
+        [
+          895,
+          100
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Un solo cliente",
+      "items": [
+        "Los siete casos llaman a jev.py: es el único punto que habla con TypeSafe",
+        "El modelo propone, el harness ejecuta; el hook solo corre para Edit y Write",
+        "El veredicto lo decide el código: 0.8 bloquea, 0.5 pregunta, el resto es silencio"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Quién dispara qué",
+      "items": [
+        "PreToolUse dispara spec_gate; PreCompact dispara compact_digest",
+        "skill_pick, file_rank, review_gate, browse y rule_coverage se invocan a mano",
+        "rule_coverage es librería: spec_gate y review_gate importan sus reglas"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Lo que el dibujo no dice",
+      "items": [
+        "Bash, MCP y NotebookEdit no pasan por el hook; tampoco los archivos que no son .py",
+        "Entre 0.5 y 0.8 el hook pregunta a la persona",
+        "Sin saldo o sin red, el gate deja pasar: encendido no siempre es aplicando",
+        "El flag se escribe con 401/402/403 y se lee en cada llamada"
+      ]
+    }
+  ]
+}

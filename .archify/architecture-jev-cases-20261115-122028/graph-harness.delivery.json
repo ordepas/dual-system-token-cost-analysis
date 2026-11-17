@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "d82c5c7b-66f9-4c76-91ef-b9a9cb64d78f",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\graph-harness.json",
+  "output": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\graph-harness.html",
+  "specification": {
+    "sha256": "4a01016ea1cf5b67e3deaa0d5aef4c45d9378a8897b24d98f1af45577b8507d6",
+    "bytes": 10593
+  },
+  "artifact": {
+    "sha256": "48574209d7072774f0fad1d8325d37d0ed1c04a1e5cb554cf00bb97511a200f9",
+    "bytes": 858454
+  }
+}

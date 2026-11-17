@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "af9ce5cf-f9fb-4c87-afc7-bfbfe6ad298b",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\case-6.json",
+  "output": "C:\\pazabache\\DCC\\s1-s2\\.archify\\architecture-jev-cases-20261115-122028\\case-6.html",
+  "specification": {
+    "sha256": "9b88f440466aed2333a274d453bd12df36f9dd4c4d3581816e0d0edbba021022",
+    "bytes": 4316
+  },
+  "artifact": {
+    "sha256": "184b27cd0cd019eee18875b8d35a4868b36a4ca27169beff42e42dc5ad193188",
+    "bytes": 849253
+  }
+}
