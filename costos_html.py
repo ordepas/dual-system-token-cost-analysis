@@ -1,0 +1,515 @@
+"""Genera costos.html a partir de `.jev_costos.jsonl`.
+
+La página es estática: los datos quedan embebidos al generarla. Cada vez que el
+log crezca, se vuelve a correr este script. El costo "sin Jev" proyecta los
+mismos tokens a la tarifa del modelo elegido (no es el E2E con lectura reducida;
+eso lo mide bench_e2e.py).
+
+Uso:  py -3 costos_html.py
+"""
+
+import json
+import os
+import time
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+LOG = os.path.join(AQUI, ".jev_costos.jsonl")
+SALIDA = os.path.join(AQUI, "costos.html")
+
+
+def _filas():
+    try:
+        with open(LOG, encoding="utf-8") as f:
+            return [json.loads(x) for x in f if x.strip()]
+    except (OSError, ValueError):
+        return []
+
+
+PLANTILLA = """<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Costos de Jev</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Paleta: slate frío, acento teal; Jev = círculo, LLM = cuadrado. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --fg: #0f1725;
+  --muted: #5a6575;
+  --line: #d8dfe8;
+  --line-strong: #aeb9c7;
+  --accent: #0f766e;
+  --accent-soft: #e3f3f0;
+  --jev: #0f766e;
+  --llm: #4f46e5;
+  --good: #067647;
+  --bad: #b42318;
+  --shadow: 0 1px 2px rgba(15, 23, 37, .06), 0 8px 24px rgba(15, 23, 37, .05);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1016;
+    --surface: #111821;
+    --surface-2: #18212c;
+    --fg: #e6edf5;
+    --muted: #9aa7b6;
+    --line: #243040;
+    --line-strong: #3a4a5e;
+    --accent: #2dd4bf;
+    --accent-soft: #0d2b29;
+    --jev: #2dd4bf;
+    --llm: #818cf8;
+    --good: #4ade80;
+    --bad: #f87171;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1016;
+  --surface: #111821;
+  --surface-2: #18212c;
+  --fg: #e6edf5;
+  --muted: #9aa7b6;
+  --line: #243040;
+  --line-strong: #3a4a5e;
+  --accent: #2dd4bf;
+  --accent-soft: #0d2b29;
+  --jev: #2dd4bf;
+  --llm: #818cf8;
+  --good: #4ade80;
+  --bad: #f87171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.55 Inter, "Segoe UI", system-ui, sans-serif;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 40px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1, h2, .num { font-family: "Space Grotesk", Inter, system-ui, sans-serif; }
+h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.1; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+h2 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.tab { font-variant-numeric: tabular-nums; }
+
+header.tope {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: 18px; margin-bottom: 26px;
+}
+.eyebrow {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 8px;
+}
+.sub { margin-top: 6px; font-size: 13.5px; }
+.controles { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+label.ctl { display: grid; gap: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+select {
+  appearance: none; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23808b9b' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+  color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 30px 7px 10px; font: inherit; font-size: 13px; min-width: 140px;
+}
+select:focus-visible, button:focus-visible, .fila-chart:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.tile {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px; box-shadow: var(--shadow); min-width: 0;
+}
+.tile .rotulo { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tile .num { font-size: 26px; line-height: 1.15; margin-top: 6px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tile .nota { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.tile.destacada { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.tile.destacada .num { color: var(--accent); }
+.tile.negativa .num { color: var(--bad); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 18px; min-width: 0;
+}
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 18px; margin-bottom: 6px; }
+.card-head .muted { font-size: 12.5px; }
+.leyenda { display: flex; gap: 16px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.leyenda span { display: inline-flex; gap: 7px; align-items: center; }
+.sw { width: 10px; height: 10px; display: inline-block; }
+.sw.jev { background: var(--jev); border-radius: 50%; }
+.sw.llm { background: var(--llm); border-radius: 2px; }
+
+.eje { display: grid; grid-template-columns: minmax(130px, 190px) 1fr minmax(112px, 150px); gap: 14px; margin-top: 14px; padding-bottom: 2px; }
+.eje .pistas { position: relative; height: 18px; }
+.eje .tick { position: absolute; top: 0; font-size: 10.5px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.chart { margin-top: 8px; }
+.fila-chart {
+  display: grid; grid-template-columns: minmax(130px, 190px) 1fr minmax(112px, 150px);
+  gap: 14px; align-items: center; padding: 5px 0; border-radius: 6px;
+}
+.fila-chart:hover { background: var(--surface-2); }
+.caso { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.caso b { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; white-space: nowrap; }
+.pista { position: relative; height: 26px; min-width: 0; }
+.pista::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+.pista .tramo { position: absolute; top: 50%; height: 2px; transform: translateY(-50%); background: var(--line-strong); }
+.dot { position: absolute; top: 50%; width: 11px; height: 11px; transform: translate(-50%, -50%); }
+.dot.jev { background: var(--jev); border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.dot.llm { background: var(--llm); border-radius: 2px; box-shadow: 0 0 0 2px var(--surface); }
+.valores { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; justify-content: flex-end; font-size: 12.5px; min-width: 0; }
+.valores b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.badge { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
+.valores .sub { flex-basis: 100%; text-align: right; font-size: 11px; color: var(--muted); }
+
+.tabla-scroll { overflow-x: auto; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; font-weight: 600; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.run { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11px; color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+tfoot td { font-weight: 600; border-top: 2px solid var(--line-strong); }
+
+.pie { font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 78ch; }
+.pie code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.vacio { padding: 28px 0; color: var(--muted); text-align: center; }
+#tip {
+  position: fixed; z-index: 20; pointer-events: none; max-width: 320px;
+  background: var(--fg); color: var(--bg); font-size: 11.5px; line-height: 1.45;
+  padding: 7px 9px; border-radius: 7px; box-shadow: var(--shadow);
+}
+
+@media (max-width: 720px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .eje, .fila-chart { grid-template-columns: 1fr; gap: 6px; }
+  .eje .pistas { display: none; }
+  .fila-chart { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .fila-chart:last-child { border-bottom: 0; }
+  .pista { order: 2; }
+  .valores { order: 3; justify-content: flex-start; }
+  .valores .sub { text-align: left; }
+  .caso { order: 1; }
+  .card { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="tope">
+    <div>
+      <div class="eyebrow">Log · .jev_costos.jsonl</div>
+      <h1>Costos de Jev</h1>
+      <p class="sub muted">__N__ llamadas registradas · Jev cobra $0.042 por millón de tokens de entrada, la salida es gratis.</p>
+    </div>
+    <div class="controles">
+      <label class="ctl" for="modelo">Modelo sin Jev
+        <select id="modelo">
+          <option value="opus">Opus 5.5 · $4 / $20</option>
+          <option value="sonnet">Sonnet 5.5 · $2 / $10</option>
+          <option value="haiku">Haiku 5.5 · $0.10 / $0.50</option>
+          <option value="fable">Fable 5.2 · $8 / $40</option>
+        </select>
+      </label>
+      <label class="ctl" for="origen">Origen
+        <select id="origen">
+          <option value="todo">Todo</option>
+          <option value="bench">Bench</option>
+          <option value="real">Hooks y scripts</option>
+        </select>
+      </label>
+      <label class="ctl" for="tema">Tema
+        <select id="tema">
+          <option value="sistema">Sistema</option>
+          <option value="claro">Claro</option>
+          <option value="oscuro">Oscuro</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <section class="tiles" aria-label="Resumen">
+    <div class="tile"><div class="rotulo">Costo real con Jev</div><div class="num" id="t-jev">—</div><div class="nota" id="t-jev-nota">—</div></div>
+    <div class="tile"><div class="rotulo">Proyección sin Jev</div><div class="num" id="t-llm">—</div><div class="nota" id="t-llm-nota">—</div></div>
+    <div class="tile destacada" id="t-ahorro-tile"><div class="rotulo">Ahorro</div><div class="num" id="t-ahorro">—</div><div class="nota" id="t-ahorro-nota">—</div></div>
+    <div class="tile"><div class="rotulo">Tokens</div><div class="num" id="t-tok">—</div><div class="nota" id="t-tok-nota">—</div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Costo por caso</h2>
+        <p class="muted">Los mismos tokens a dos tarifas. Escala logarítmica.</p>
+      </div>
+      <div class="leyenda" aria-hidden="true">
+        <span><i class="sw jev"></i>Jev (real)</span>
+        <span><i class="sw llm"></i>LLM (mismos tokens)</span>
+      </div>
+    </div>
+    <div class="eje" aria-hidden="true"><div></div><div class="pistas" id="eje"></div><div></div></div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Corridas</h2>
+        <p class="muted">Una fila por llamada del log.</p>
+      </div>
+      <p class="muted" id="nota-tabla">—</p>
+    </div>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr>
+          <th>Hora</th><th>Caso</th><th>Corrida</th>
+          <th class="num">Tok in</th><th class="num">Tok out</th>
+          <th class="num">$ Jev</th><th class="num">$ LLM</th><th class="num">Factor</th>
+        </tr></thead>
+        <tbody id="tabla"></tbody>
+        <tfoot id="tabla-pie"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <p class="pie">Generado el __TS__ desde <code>.jev_costos.jsonl</code>. El costo sin Jev valora los mismos tokens a la tarifa del modelo elegido: es una proyección, no una corrida. El ahorro E2E con lectura reducida se mide aparte con <code>bench_e2e.py</code>. Jev: $0.042/Mtok de entrada, salida gratis.</p>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const FILAS = __DATOS__;
+const PRECIOS = {
+  opus:   { nombre: "Opus 5.5",   in: 4.00, out: 20.00 },
+  sonnet: { nombre: "Sonnet 5.5", in: 2.00, out: 10.00 },
+  haiku:  { nombre: "Haiku 5.5",  in: 0.10, out: 0.50 },
+  fable:  { nombre: "Fable 5.2",  in: 8.00, out: 40.00 },
+};
+const JEV_MTOK = 0.042;
+const $ = (s) => document.querySelector(s);
+const estado = { modelo: "opus", origen: "todo" };
+
+function guardar(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function leer(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+function fmtUSD(v) {
+  if (!v) return "$0";
+  if (v < 0.001) return "$" + v.toFixed(6).replace(/0+$/, "").replace(/\\.$/, "");
+  if (v < 0.01) return "$" + v.toFixed(5);
+  if (v < 1) return "$" + v.toFixed(4);
+  return "$" + v.toFixed(2);
+}
+function fmtEje(v) {
+  if (v >= 0.01) return "$" + v.toFixed(2);
+  return "$" + v.toFixed(6).replace(/0+$/, "").replace(/\\.$/, "");
+}
+const fmtTok = (v) => new Intl.NumberFormat("es-PE").format(v);
+const fmtPct = (v) => (v * 100).toFixed(1) + "%";
+const fmtFactor = (v) => (v >= 10 ? v.toFixed(0) : v.toFixed(1)) + "×";
+
+function esBench(f) { return String(f.run).startsWith("bench:"); }
+function caso(f) {
+  return esBench(f) ? f.run.slice(6) : f.script.replace(/\\.py$/, "");
+}
+function aplica(f) {
+  if (estado.origen === "todo") return true;
+  return estado.origen === "bench" ? esBench(f) : !esBench(f);
+}
+function grupos() {
+  const P = PRECIOS[estado.modelo];
+  const mapa = new Map();
+  for (const f of FILAS) {
+    if (!aplica(f)) continue;
+    const bench = esBench(f);
+    const nombre = caso(f);
+    const clave = (bench ? "b:" : "r:") + nombre;
+    const g = mapa.get(clave) || { clave, nombre, tipo: bench ? "bench" : "real", n: 0, tin: 0, tout: 0 };
+    g.n += 1; g.tin += Number(f.in) || 0; g.tout += Number(f.out) || 0;
+    mapa.set(clave, g);
+  }
+  return [...mapa.values()].map((g) => {
+    const jev = g.tin * JEV_MTOK / 1e6;
+    const llm = (g.tin * P.in + g.tout * P.out) / 1e6;
+    return { ...g, jev, llm, factor: jev ? llm / jev : 0, ahorro: llm ? 1 - jev / llm : 0 };
+  });
+}
+
+function renderResumen(gs) {
+  const P = PRECIOS[estado.modelo];
+  const t = gs.reduce((a, g) => ({ n: a.n + g.n, tin: a.tin + g.tin, tout: a.tout + g.tout, jev: a.jev + g.jev, llm: a.llm + g.llm }),
+                      { n: 0, tin: 0, tout: 0, jev: 0, llm: 0 });
+  const ahorro = t.llm ? 1 - t.jev / t.llm : 0;
+  $("#t-jev").textContent = fmtUSD(t.jev);
+  $("#t-jev-nota").textContent = t.n + " llamadas · salida gratis";
+  $("#t-llm").textContent = fmtUSD(t.llm);
+  $("#t-llm-nota").textContent = P.nombre + " · mismos tokens";
+  $("#t-ahorro").textContent = fmtPct(ahorro);
+  $("#t-ahorro-nota").textContent = t.jev ? fmtFactor(t.llm / t.jev) + " más barato con Jev" : "—";
+  $("#t-ahorro-tile").classList.toggle("negativa", ahorro < 0);
+  $("#t-tok").textContent = fmtTok(t.tin);
+  $("#t-tok-nota").textContent = fmtTok(t.tout) + " de salida · " + t.n + " llamadas";
+  $("#nota-tabla").textContent = t.n + " filas · " + P.nombre;
+}
+
+function renderChart(gs) {
+  const cont = $("#chart");
+  const eje = $("#eje");
+  cont.innerHTML = "";
+  eje.innerHTML = "";
+  if (!gs.length) {
+    cont.innerHTML = '<p class="vacio">El log está vacío. Corre algún caso y vuelve a generar.</p>';
+    return;
+  }
+  const vals = gs.flatMap((g) => [g.jev, g.llm]).filter((v) => v > 0);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const lo = Math.pow(10, Math.floor(Math.log10(min)));
+  const hi = Math.pow(10, Math.ceil(Math.log10(max)));
+  const pos = (v) => {
+    if (v <= 0) return 0;
+    const r = (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo) || 1);
+    return Math.max(0, Math.min(100, r * 100));
+  };
+  for (let e = lo; e <= hi * 1.0001; e *= 10) {
+    const d = document.createElement("span");
+    d.className = "tick";
+    d.textContent = fmtEje(e);
+    d.style.left = pos(e) + "%";
+    if (pos(e) < 5) d.style.transform = "translateX(0)";
+    if (pos(e) > 95) d.style.transform = "translateX(-100%)";
+    eje.appendChild(d);
+  }
+  const orden = [...gs].sort((a, b) => b.llm - a.llm);
+  for (const g of orden) {
+    const fila = document.createElement("div");
+    fila.className = "fila-chart";
+    fila.tabIndex = 0;
+    const a = pos(g.jev), b = pos(g.llm);
+    const ini = Math.min(a, b), fin = Math.max(a, b);
+    fila.innerHTML =
+      '<div class="caso"><b title="' + g.nombre + '">' + g.nombre + '</b>' +
+      '<span class="tag">' + (g.tipo === "bench" ? "bench" : "real") + '</span></div>' +
+      '<div class="pista"><span class="tramo" style="left:' + ini + '%;width:' + (fin - ini) + '%"></span>' +
+      '<span class="dot jev" style="left:' + a + '%"></span>' +
+      '<span class="dot llm" style="left:' + b + '%"></span></div>' +
+      '<div class="valores"><b>' + fmtUSD(g.llm) + '</b><span class="badge">' + fmtFactor(g.factor) + '</span>' +
+      '<span class="sub">Jev ' + fmtUSD(g.jev) + ' · ' + g.n + (g.n === 1 ? ' llamada' : ' llamadas') + '</span></div>';
+    const detalle = g.nombre + " · " + g.n + " llamada" + (g.n === 1 ? "" : "s") +
+      " · " + fmtTok(g.tin) + " tok in · Jev " + fmtUSD(g.jev) + " · " + PRECIOS[estado.modelo].nombre +
+      " " + fmtUSD(g.llm) + " · " + fmtFactor(g.factor);
+    fila.setAttribute("aria-label", detalle);
+    fila.addEventListener("mousemove", (ev) => mostrarTip(ev, detalle));
+    fila.addEventListener("mouseleave", ocultarTip);
+    fila.addEventListener("focus", (ev) => mostrarTip(ev, detalle));
+    fila.addEventListener("blur", ocultarTip);
+    cont.appendChild(fila);
+  }
+}
+
+function mostrarTip(ev, texto) {
+  const tip = $("#tip");
+  tip.textContent = texto;
+  tip.hidden = false;
+  const rect = ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : null;
+  const cx = (typeof ev.clientX === "number" && ev.clientX) ? ev.clientX : (rect ? rect.left + rect.width / 2 : 0);
+  const cy = (typeof ev.clientY === "number" && ev.clientY) ? ev.clientY : (rect ? rect.bottom : 0);
+  const x = Math.min(cx + 12, window.innerWidth - 330);
+  const y = Math.min(cy + 14, window.innerHeight - 70);
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top = Math.max(8, y) + "px";
+}
+function ocultarTip() { $("#tip").hidden = true; }
+
+function renderTabla() {
+  const P = PRECIOS[estado.modelo];
+  const tbody = $("#tabla");
+  tbody.innerHTML = "";
+  const filas = FILAS.filter(aplica).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+  for (const f of filas) {
+    const jev = (Number(f.in) || 0) * JEV_MTOK / 1e6;
+    const llm = ((Number(f.in) || 0) * P.in + (Number(f.out) || 0) * P.out) / 1e6;
+    const fac = jev ? llm / jev : 0;
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + String(f.ts).slice(11, 19) + "</td>" +
+      "<td>" + caso(f) + " <span class='tag'>" + (esBench(f) ? "bench" : "real") + "</span></td>" +
+      "<td class='run' title='" + String(f.run) + "'>" + String(f.run) + "</td>" +
+      "<td class='num'>" + fmtTok(f.in) + "</td>" +
+      "<td class='num'>" + fmtTok(f.out) + "</td>" +
+      "<td class='num'>" + fmtUSD(jev) + "</td>" +
+      "<td class='num'>" + fmtUSD(llm) + "</td>" +
+      "<td class='num'>" + fmtFactor(fac) + "</td>";
+    tbody.appendChild(tr);
+  }
+  if (!filas.length) {
+    tbody.innerHTML = "<tr><td colspan='8' class='vacio'>Sin filas para este filtro.</td></tr>";
+  }
+  const t = filas.reduce((a, f) => {
+    const jev = (Number(f.in) || 0) * JEV_MTOK / 1e6;
+    const llm = ((Number(f.in) || 0) * P.in + (Number(f.out) || 0) * P.out) / 1e6;
+    return { tin: a.tin + (Number(f.in) || 0), tout: a.tout + (Number(f.out) || 0), jev: a.jev + jev, llm: a.llm + llm };
+  }, { tin: 0, tout: 0, jev: 0, llm: 0 });
+  $("#tabla-pie").innerHTML = "<tr><td>Total</td><td>" + filas.length + " filas</td><td></td>" +
+    "<td class='num'>" + fmtTok(t.tin) + "</td><td class='num'>" + fmtTok(t.tout) + "</td>" +
+    "<td class='num'>" + fmtUSD(t.jev) + "</td><td class='num'>" + fmtUSD(t.llm) + "</td>" +
+    "<td class='num'>" + (t.jev ? fmtFactor(t.llm / t.jev) : "—") + "</td></tr>";
+}
+
+function render() {
+  const gs = grupos();
+  renderResumen(gs);
+  renderChart(gs);
+  renderTabla();
+}
+
+function initControles() {
+  const modelo = leer("costos-modelo");
+  if (modelo && PRECIOS[modelo]) estado.modelo = modelo;
+  $("#modelo").value = estado.modelo;
+  $("#modelo").addEventListener("change", (e) => {
+    estado.modelo = e.target.value;
+    guardar("costos-modelo", estado.modelo);
+    render();
+  });
+  $("#origen").addEventListener("change", (e) => { estado.origen = e.target.value; render(); });
+  const tema = $("#tema");
+  const aplicaTema = (v) => {
+    if (v === "sistema") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", v === "oscuro" ? "dark" : "light");
+  };
+  const guardado = leer("costos-tema");
+  if (guardado) { tema.value = guardado; aplicaTema(guardado); }
+  tema.addEventListener("change", () => { aplicaTema(tema.value); guardar("costos-tema", tema.value); });
+}
+
+initControles();
+render();
+</script>
+</body>
+</html>
+"""
+
+
+def main():
+    filas = _filas()
+    datos = json.dumps(filas, ensure_ascii=False).replace("<", "\\u003c")
+    html = (PLANTILLA.replace("__DATOS__", datos)
+            .replace("__N__", str(len(filas)))
+            .replace("__TS__", time.strftime("%Y-%m-%d %H:%M")))
+    with open(SALIDA, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"{SALIDA}  ({len(filas)} filas)")
+
+
+if __name__ == "__main__":
+    main()
