@@ -26,11 +26,11 @@ from jev import JevApagado, ask  # noqa: E402
 from rule_coverage import rules as spec_rules  # noqa: E402
 
 BLOCK, ASK = 0.8, 0.5
-SPECS = os.path.join(AQUI, "specs.md")
+SPECS = os.environ.get("JEV_SPECS") or os.path.join(AQUI, "specs.md")
 AUDIT = os.path.join(AQUI, ".jev_audit.jsonl")
 EXT = {e.strip() if e.strip().startswith(".") else "." + e.strip()
        for e in os.environ.get("JEV_EXT", ".py").split(",") if e.strip()}
-GOBIERNO = ("specs.md", ".claude/settings.json")
+GOBIERNO = ("specs.md", "AGENTS.md", ".claude/settings.json", ".claude/settings.local.json")
 MAX_CODE = 20000
 
 # ponytail: un regex cubre las credenciales; si se necesitan más patrones, se suman aquí
@@ -58,18 +58,29 @@ def _resultante(ti):
             base = f.read()
     except (OSError, KeyError):
         return nuevo[:MAX_CODE]
-    if viejo and viejo in base:
+    CRLF, LF = chr(13) + chr(10), chr(10)
+    plano = base.replace(CRLF, LF)
+    viejo_plano = viejo.replace(CRLF, LF)
+    if viejo_plano and viejo_plano in plano:
+        out = plano.replace(viejo_plano, nuevo, -1 if ti.get("replace_all") else 1)
+    elif viejo and viejo in base:
         out = base.replace(viejo, nuevo, -1 if ti.get("replace_all") else 1)
     else:
-        out = nuevo
+        # no se pudo reconstruir (CRLF, archivo cambiado): se evalúa el archivo actual
+        out = nuevo or base
     if len(out) <= MAX_CODE:
         return out
     i = out.find(nuevo) if nuevo else 0
     return out[max(0, i - 3000):max(0, i - 3000) + MAX_CODE]
 
 
-def decidir(code, path, tool="Write", extra=None):
-    """Devuelve dict de decisión o None para abstenerse."""
+def decidir(code, path, tool="Write", extra=None, cambio=None):
+    """Devuelve dict de decisión o None para abstenerse.
+
+    `code` es el archivo resultante (lo que juzga Jev); `cambio` es solo el texto
+    nuevo, y es lo que mira el regex: una credencial que ya estaba en el archivo
+    no convierte cualquier edición en un deny.
+    """
     entry = {"file": path, "tool": tool, **(extra or {})}
 
     if any(path.endswith("/" + g) for g in GOBIERNO):
@@ -77,7 +88,7 @@ def decidir(code, path, tool="Write", extra=None):
         _log({**entry, "decision": "deny", "rule": "gobierno", "p": 1.0})
         return {"permissionDecision": "deny", "permissionDecisionReason": reason}
 
-    if SECRETOS.search(code):
+    if SECRETOS.search(cambio if cambio is not None else code):
         reason = ("Regla Credenciales: el bloque escribe una credencial literal. "
                   "Léela de una variable de entorno.")
         _log({**entry, "decision": "deny", "rule": "credenciales", "p": 1.0})
@@ -90,7 +101,8 @@ def decidir(code, path, tool="Write", extra=None):
                     f"¿El código de `proposed_code` viola lo que manda la regla `rules[{i}]` "
                     f"({r['title']})?"}
           for i, r in enumerate(rs)}
-    ans = ask({"file": path, "operation": tool, "proposed_code": code[:MAX_CODE], "rules": rs}, qs)
+    ans = ask({"file": path, "operation": tool, "proposed_code": code[:MAX_CODE], "rules": rs}, qs,
+              timeout=25)  # menor que el timeout del hook: si tarda, se deja pasar
     hits = {k: v["value"] for k, v in ans.items()}
     top = max(hits, key=hits.get)
     regla = next((r for r in rs if r["id"] == top), {"title": top, "text": ""})
@@ -162,8 +174,9 @@ if __name__ == "__main__":
     if not code.strip():
         sys.exit(0)
     try:
+        cambio = ti.get("content") if datos.get("tool_name") == "Write" else (ti.get("new_string") or "")
         out = decidir(code, path, datos.get("tool_name", "Write"),
-                      {"session": datos.get("session_id")})
+                      {"session": datos.get("session_id")}, cambio=cambio)
     except JevApagado as e:  # sin saldo: se avisa y se deja seguir
         print(json.dumps({"systemMessage": str(e).splitlines()[0]}))
         sys.exit(0)

@@ -86,8 +86,11 @@ def _registrar_costo(usage):
 def ask(state, questions, *, model="jev-latest", long_context=False, timeout=90):
     if not activo():
         raise JevApagado(AVISO.format(detalle=_motivo()))
+    key = os.environ.get("TYPESAFE_API_KEY")
+    if not key:
+        raise JevApagado("Falta TYPESAFE_API_KEY: se sigue por el camino regular.")
     headers = {
-        "Authorization": f"Bearer {os.environ['TYPESAFE_API_KEY']}",
+        "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
     if long_context:

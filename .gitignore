@@ -8,3 +8,6 @@ __pycache__/
 # Configuración de la máquina y artefactos generados
 .claude/
 .archify/
+
+# Capturas de verificación
+.capturas/

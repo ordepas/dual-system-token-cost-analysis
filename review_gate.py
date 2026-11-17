@@ -120,3 +120,5 @@ if __name__ == "__main__":
         print(f"{verdict}  ({len(diff)} chars)  top={top} {hits[top]:.2f}")
         for k, v in sorted(hits.items(), key=lambda kv: -kv[1]):
             print(f"  {v:.2f}  {k}")
+        if verdict == "bloquear":
+            sys.exit(1)  # sirve como pre-commit: un diff bloqueado falla el job

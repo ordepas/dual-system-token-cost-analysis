@@ -10,7 +10,7 @@ import os
 import re
 import sys
 
-from jev import ask
+from jev import JevApagado, ask
 
 STOP = {"the", "and", "for", "with", "that", "this", "from", "into", "when", "then", "than", "are",
         "not", "but", "its", "their", "they", "you", "your", "use", "uses", "must", "only", "each",
@@ -66,6 +66,11 @@ def rules(md_path, section=None):
         else:
             out.append({"id": base, "title": title,
                         "text": " ".join(x.strip() for x in block if x.strip())[:1200]})
+    if not out and body.strip():
+        # una sección sin bloques en negrita (p. ej. un bloque de código) cuenta como una regla
+        titulo = section or "reglas"
+        out.append({"id": re.sub(r"\W+", "_", titulo.lower()).strip("_")[:34],
+                    "title": titulo, "text": body.strip()[:1200]})
     return out
 
 
@@ -128,6 +133,8 @@ def shortlist(rule, corpus, kind, per=4):
 
 
 def coverage(repo, rules_list, per=4):
+    if not rules_list:
+        return []  # sin reglas no hay nada que preguntar: cero llamadas a la API
     corpus = list(_test_files(repo))
     tests, lints, per_rule = {}, {}, {}
     for r in rules_list:
@@ -176,6 +183,8 @@ def _self_check():
     print([x["id"] for x in r])
     assert [x["id"] for x in r] == ["protocol", "copy"], r
     assert "npm semver" in r[0]["text"]
+    # sin reglas no se llama a la API: coverage devuelve vacío antes de ask
+    assert coverage(".", []) == []
 
 
 if __name__ == "__main__":
@@ -186,6 +195,14 @@ if __name__ == "__main__":
         repo, specs = sys.argv[1], sys.argv[2]
         sections = sys.argv[3:] or ["Non-negotiable", "Type safety"]
         found = [x for s in sections for x in rules(specs, s)]
-        for row in coverage(repo, found):
+        if not found:
+            sys.exit(f"sin reglas: {specs} no tiene bloques en las secciones "
+                     f"{', '.join(sections)}. Pasa las secciones como argumentos.")
+        try:
+            rows = coverage(repo, found)
+        except JevApagado as e:
+            print(str(e).splitlines()[0])
+            sys.exit(0)
+        for row in rows:
             mark = "cubierta   " if row["p"] >= 0.5 else "SIN CUBRIR "
             print(f"{mark} {row['p']:.2f}  test={row['test']:.2f} lint={row['lint']:.2f}  {row['title']}")
